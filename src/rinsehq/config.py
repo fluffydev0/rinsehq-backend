@@ -4,8 +4,15 @@ import os
 from functools import lru_cache
 from typing import List
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _settings_config() -> SettingsConfigDict:
+    # On Render, use dashboard env vars only — never a local .env file.
+    if os.getenv("RENDER") == "true":
+        return SettingsConfigDict(env_file=None)
+    return SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 def normalize_database_url(url: str) -> str:
@@ -18,9 +25,12 @@ def normalize_database_url(url: str) -> str:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = _settings_config()
 
-    database_url: str = "postgresql+psycopg://rinsehq:rinsehq@localhost:5432/rinsehq"
+    database_url: str = Field(
+        default="postgresql+psycopg://rinsehq:rinsehq@localhost:5432/rinsehq",
+        validation_alias=AliasChoices("DATABASE_URL", "database_url"),
+    )
     jwt_secret: str = "dev-secret-change-in-production"
     jwt_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
@@ -87,9 +97,12 @@ def validate_deployment_config(settings: Settings | None = None) -> None:
     settings = settings or get_settings()
     on_render = os.getenv("RENDER") == "true"
     if on_render and settings.is_local_database:
+        has_db_env = bool(os.getenv("DATABASE_URL"))
         raise RuntimeError(
-            "DATABASE_URL is missing on Render — the app is using localhost:5432. "
-            "Fix: open your Web Service → Environment → Add Environment Variable → "
-            "select your Postgres instance (Internal Database URL). "
-            "Then redeploy. Also set JWT_SECRET and SEED_DEMO_DATA=false."
+            "DATABASE_URL is not configured on this Render Web Service. "
+            f"DATABASE_URL env var present: {has_db_env}. "
+            "Fix: Web Service (not Postgres) → Environment → Add Environment Variable → "
+            "Add from Database → pick your Postgres → Save → Redeploy. "
+            "Or paste Internal Database URL manually as DATABASE_URL. "
+            "Also set JWT_SECRET and SEED_DEMO_DATA=false."
         )
