@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import List
 
@@ -79,3 +80,16 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_deployment_config(settings: Settings | None = None) -> None:
+    """Fail fast on Render when DATABASE_URL was never linked."""
+    settings = settings or get_settings()
+    on_render = os.getenv("RENDER") == "true"
+    if on_render and settings.is_local_database:
+        raise RuntimeError(
+            "DATABASE_URL is missing on Render — the app is using localhost:5432. "
+            "Fix: open your Web Service → Environment → Add Environment Variable → "
+            "select your Postgres instance (Internal Database URL). "
+            "Then redeploy. Also set JWT_SECRET and SEED_DEMO_DATA=false."
+        )

@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from rinsehq.config import get_settings
+from rinsehq.config import get_settings, validate_deployment_config
 from rinsehq.infrastructure.db.session import init_db
 from rinsehq.presentation.api.v1.router import api_v1_router
 
@@ -14,6 +14,7 @@ from rinsehq.presentation.api.v1.router import api_v1_router
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     settings = get_settings()
+    validate_deployment_config(settings)
     init_db()
     if settings.seed_demo_data:
         from rinsehq.infrastructure.seed import seed_demo_data
