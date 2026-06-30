@@ -3,14 +3,29 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from rinsehq.domain.entities.order import OrderLineItem
 from rinsehq.domain.entities.service import ConfigItem, ServicesConfiguration
 from rinsehq.domain.repositories.auth_repository import CreateUserInput
 from rinsehq.domain.repositories.order_repository import CreateOrderInput
 from rinsehq.domain.repositories.store_repository import CreateAssignmentInput, CreateStoreInput
-from rinsehq.infrastructure.db.models import BusinessProfileModel, IdSequenceModel, UserModel
+from rinsehq.infrastructure.db.models import (
+    BusinessProfileModel,
+    CustomerModel,
+    IdSequenceModel,
+    InvoiceLineItemModel,
+    InvoiceModel,
+    OrderLineItemModel,
+    OrderModel,
+    ServiceConfigModel,
+    ServiceModel,
+    StoreAssignmentModel,
+    StoreModel,
+    TransactionModel,
+    UserModel,
+    VerificationCodeModel,
+)
 from rinsehq.infrastructure.db.session import get_session_factory
 from rinsehq.infrastructure.repositories.sqlalchemy_auth_repository import SqlAlchemyAuthRepository
 from rinsehq.infrastructure.repositories.sqlalchemy_catalog_repository import (
@@ -282,16 +297,40 @@ def _config_from_default() -> ServicesConfiguration:
     )
 
 
-async def seed_demo_data() -> None:
+def _reset_demo_data(session) -> None:
+    for model in (
+        TransactionModel,
+        InvoiceLineItemModel,
+        InvoiceModel,
+        OrderLineItemModel,
+        OrderModel,
+        CustomerModel,
+        ServiceModel,
+        ServiceConfigModel,
+        StoreAssignmentModel,
+        BusinessProfileModel,
+        StoreModel,
+        VerificationCodeModel,
+        UserModel,
+        IdSequenceModel,
+    ):
+        session.execute(delete(model))
+    session.flush()
+
+
+async def seed_demo_data(force: bool = False) -> None:
     session = get_session_factory()()
     try:
         existing = session.scalar(
             select(UserModel).where(UserModel.email == "demo@rinsehq.com")
         )
-        if existing:
-            print("Demo data already exists — skipping seed.")
+        if existing and not force:
+            print("Demo data already exists — skipping seed. Use --force to reseed.")
             session.commit()
             return
+        if existing and force:
+            print("Removing existing demo data...")
+            _reset_demo_data(session)
 
         auth_repo = SqlAlchemyAuthRepository(session)
         store_repo = SqlAlchemyStoreRepository(session)
@@ -457,7 +496,10 @@ async def seed_demo_data() -> None:
 
 
 def main() -> None:
-    asyncio.run(seed_demo_data())
+    import sys
+
+    force = "--force" in sys.argv or "-f" in sys.argv
+    asyncio.run(seed_demo_data(force=force))
 
 
 if __name__ == "__main__":
