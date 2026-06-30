@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rinsehq
+      POSTGRES_PASSWORD: rinsehq
+      POSTGRES_DB: rinsehq
+    ports:
+      - "5432:5432"
+    volumes:
+      - rinsehq_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rinsehq -d rinsehq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rinsehq_pg_data:
