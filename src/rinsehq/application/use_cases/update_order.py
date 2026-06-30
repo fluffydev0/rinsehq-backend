@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rinsehq.application.dtos.common import ErrorResult, Result, SuccessResult
 from rinsehq.application.dtos.order import UpdateOrderDto
 from rinsehq.domain.entities.order import Order

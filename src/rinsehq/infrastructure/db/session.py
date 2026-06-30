@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
@@ -31,7 +33,9 @@ def get_session_factory() -> sessionmaker[Session]:
 def init_db() -> None:
     from rinsehq.infrastructure.db import models  # noqa: F401
 
-    Base.metadata.create_all(bind=get_engine())
+    settings = get_settings()
+    if settings.database_url.startswith("sqlite"):
+        Base.metadata.create_all(bind=get_engine())
 
 
 def get_db_session() -> Generator[Session, None, None]:

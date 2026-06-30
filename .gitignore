@@ -1,10 +1,81 @@
+# --- Secrets & local config (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials.json
+service-account*.json
+
+# --- Python ---
 .venv/
+venv/
+env/
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
 *.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+*.egg
+
+# --- Testing & coverage ---
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
-.env
-rinsehq.db
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# --- Type checkers & linters ---
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# --- Databases & local data ---
 *.db
+*.sqlite
+*.sqlite3
+rinsehq.db
+postgres-data/
+
+# --- Logs & runtime ---
+*.log
+logs/
+*.pid
+
+# --- IDE & editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+*.sublime-project
+*.sublime-workspace
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+
+# --- Docker (local overrides only; keep docker-compose.yml tracked) ---
+docker-compose.override.yml
+docker-compose.local.yml
+
+# --- Misc ---
+.cache/
+tmp/
+temp/
+*.bak

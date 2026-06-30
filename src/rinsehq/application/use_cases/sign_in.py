@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rinsehq.application.dtos.auth import SignInInput, validate_sign_in
 from rinsehq.application.dtos.common import ErrorResult, Result, SuccessResult
 from rinsehq.domain.entities.user import User, UserCredentials

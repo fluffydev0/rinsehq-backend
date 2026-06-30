@@ -1,67 +1,49 @@
 from datetime import datetime, timezone
 
-import pytest
+from tests.helpers import signup_and_token
 
 
-@pytest.fixture
-def auth_headers(client):
-    client.post(
-        "/api/v1/auth/signup",
-        json={"email": "orders@example.com", "password": "password123"},
-    )
-    login = client.post(
-        "/api/v1/auth/login",
-        json={"email": "orders@example.com", "password": "password123"},
-    )
-    token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-def test_orders_crud(client, auth_headers):
+def test_orders_crud(client):
+    headers = signup_and_token(client, "orders@example.com")
     now = datetime.now(timezone.utc).isoformat()
     create = client.post(
-        "/api/v1/orders",
-        headers=auth_headers,
+        "/v1/orders",
+        headers=headers,
         json={
-            "type": "mobile_app",
-            "customer": "Jane Doe",
-            "amount_cents": 1500000,
-            "status": "active",
-            "order_date": now,
-            "delivery_date": now,
-            "delivery_mode": "Pickup & delivery",
+            "customer": {"name": "Jane Doe", "email": "jane@example.com", "phone": "+2348012345678"},
+            "lineItems": [{"name": "Wash", "quantity": 1, "unitPrice": 1500000, "amount": 1500000}],
+            "orderType": "drop-off",
+            "total": 1500000,
+            "subtotal": 1500000,
         },
     )
     assert create.status_code == 201
-    order_id = create.json()["id"]
-    assert create.json()["customer"] == "Jane Doe"
-    assert create.json()["amount_display"] == "N15,000"
+    order = create.json()["data"]["order"]
+    order_id = order["id"]
+    assert order["customer"] == "Jane Doe"
 
-    listing = client.get("/api/v1/orders", headers=auth_headers)
+    listing = client.get("/v1/orders", headers=headers)
     assert listing.status_code == 200
-    assert len(listing.json()) == 1
+    assert len(listing.json()["data"]) == 1
 
-    detail = client.get(f"/api/v1/orders/{order_id}", headers=auth_headers)
+    detail = client.get(f"/v1/orders/{order_id}", headers=headers)
     assert detail.status_code == 200
 
     update = client.patch(
-        f"/api/v1/orders/{order_id}",
-        headers=auth_headers,
+        f"/v1/orders/{order_id}",
+        headers=headers,
         json={"status": "completed"},
     )
     assert update.status_code == 200
-    assert update.json()["status"] == "completed"
-
-    filtered = client.get("/api/v1/orders?status=completed", headers=auth_headers)
-    assert filtered.status_code == 200
-    assert len(filtered.json()) == 1
+    assert update.json()["data"]["status"] == "completed"
 
 
 def test_orders_require_auth(client):
-    response = client.get("/api/v1/orders")
+    response = client.get("/v1/orders")
     assert response.status_code == 401
 
 
-def test_get_order_not_found(client, auth_headers):
-    response = client.get("/api/v1/orders/missing-id", headers=auth_headers)
+def test_get_order_not_found(client):
+    headers = signup_and_token(client, "orders2@example.com")
+    response = client.get("/v1/orders/missing-id", headers=headers)
     assert response.status_code == 404

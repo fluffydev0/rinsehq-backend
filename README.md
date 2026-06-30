@@ -1,60 +1,96 @@
-# rinsehq-api
+# RinseHQ API
 
-FastAPI backend for the RinseHQ laundry management system. Clean architecture with swappable repositories, JWT auth, and SQLite by default.
+Laundry business management backend for the [rinsehq-dashboard](https://github.com/rinse-hq/rinsehq-dashboard) frontend.
+
+## Stack
+
+- **FastAPI** + Uvicorn
+- **PostgreSQL** (Docker) / SQLite (tests)
+- **SQLAlchemy 2** + Alembic
+- **JWT** auth with multi-store RBAC
+- **Gmail SMTP** for OTP / invites
+- **Cloudinary** for onboarding file uploads
+- **Paystack** for invoice payments
+
+## Quick start
+
+```bash
+# Start PostgreSQL
+docker compose up -d
+
+# Configure environment
+cp .env.example .env
+# Edit .env with JWT_SECRET, SMTP, Cloudinary, Paystack keys
+
+# Install & migrate
+pip install -e ".[dev]"
+alembic upgrade head
+
+# Run API
+uvicorn rinsehq.main:app --reload --port 8000
+```
+
+Frontend: `VITE_API_BASE_URL=http://localhost:8000/v1`
+
+## API conventions
+
+- Base path: `/v1`
+- Responses: `{ "success": true, "data": T }` or `{ "success": false, "error": "..." }`
+- Auth: `Authorization: Bearer <token>` (token issued after `POST /auth/select-store` or auto on single-store login)
+- Amounts stored in **kobo** (integer); list views format as `N4,300`
+
+## Demo accounts
+
+When `SEED_DEMO_DATA=true`, these accounts are created (password: `Demo1234!`):
+
+| Email | Role | Stores |
+|-------|------|--------|
+| demo@rinsehq.com | Owner | STR-001, STR-002, STR-003 |
+| chioma@laundrycare.ng | Manager | STR-002, STR-003 |
+| emeka@laundrycare.ng | Staff | STR-003 |
+| fatima@laundrycare.ng | Viewer | STR-001, STR-002 |
+
+## Environment variables
+
+See [`.env.example`](.env.example) for the full list.
+
+### Cloudinary setup
+
+1. Create an account at [Cloudinary Console](https://console.cloudinary.com/)
+2. Copy **Cloud name**, **API Key**, and **API Secret** from the dashboard
+3. Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `.env`
+4. Optional: set `CLOUDINARY_FOLDER=rinsehq/onboarding`
+
+### Gmail SMTP
+
+1. Enable 2FA on your Google account
+2. Create an [App Password](https://myaccount.google.com/apppasswords)
+3. Set `SMTP_USER`, `SMTP_PASSWORD` (no spaces), `SMTP_FROM` in `.env`
 
 ## Architecture
 
 ```
-src/rinsehq/
-├── domain/           # Entities & repository interfaces
-├── application/      # Use cases & DTOs
-├── infrastructure/   # SQLAlchemy, JWT, DI
-└── presentation/     # FastAPI routers & schemas
+presentation/  → FastAPI routers, Pydantic schemas
+application/   → Use cases, DTOs
+domain/        → Entities, repository protocols
+infrastructure/→ SQLAlchemy, JWT, email, Cloudinary, Paystack
 ```
 
-## Getting started
+## Tests
 
 ```bash
-cd rinsehq-api
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env
-alembic upgrade head
-uvicorn rinsehq.main:app --reload --port 8000
+PYTHONPATH=src pytest tests/ -q
 ```
 
-Open [http://localhost:8000/docs](http://localhost:8000/docs) for interactive API docs.
+## Main endpoints
 
-### Demo credentials
-
-- Email: `demo@rinsehq.com`
-- Password: `Demo1234!`
-
-## API (v1)
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/v1/health` | — | Liveness |
-| POST | `/api/v1/auth/signup` | — | Register |
-| POST | `/api/v1/auth/login` | — | JWT login |
-| GET | `/api/v1/auth/me` | Bearer | Current user |
-| GET | `/api/v1/orders` | Bearer | List orders |
-| POST | `/api/v1/orders` | Bearer | Create order |
-| GET | `/api/v1/orders/{id}` | Bearer | Order detail |
-| PATCH | `/api/v1/orders/{id}` | Bearer | Update order |
-| GET | `/api/v1/dashboard/summary` | Bearer | Status counts |
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `uvicorn rinsehq.main:app --reload` | Dev server |
-| `alembic upgrade head` | Run migrations |
-| `pytest` | Run tests |
-
-## Configuration
-
-See `.env.example` for `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRE_MINUTES`, `CORS_ORIGINS`, and `SEED_DEMO_DATA`.
-# rinsehq-backend
-# rinsehq-backend
+| Area | Examples |
+|------|----------|
+| Auth | `POST /v1/auth/signup`, `/login`, `/select-store`, `/verify-email` |
+| Stores | `GET /v1/stores`, `POST /v1/stores` |
+| Orders | `GET/POST /v1/orders` |
+| Dashboard | `GET /v1/dashboard/summary` |
+| Services | `GET/POST /v1/services` |
+| Invoices | `GET /v1/invoices/:id`, `POST /v1/invoices/:id/pay` |
+| Account | `GET/PATCH /v1/account/personal` |
+| Admins | `GET/POST /v1/admins` |

@@ -1,6 +1,9 @@
-from typing import List, Optional, Union
-from rinsehq.domain.entities.order import Order
-from rinsehq.domain.repositories.order_repository import OrderFilters, OrderRepository
+from __future__ import annotations
+
+from typing import Optional
+
+from rinsehq.domain.entities.order import Order, OrderStatus
+from rinsehq.domain.repositories.order_repository import OrderFilters, OrderRepository, PaginatedOrders
 
 
 class ListOrdersUseCase:
@@ -9,11 +12,18 @@ class ListOrdersUseCase:
 
     async def execute(
         self,
-        status: Optional[str] = None,
+        store_id: str,
+        status: Optional[OrderStatus] = None,
         search: Optional[str] = None,
-    ) -> List[Order]:
-        filters = OrderFilters(
-            status=status,  # type: ignore[arg-type]
-            search=search.strip() if search else None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedOrders:
+        return await self._order_repository.list_orders(
+            OrderFilters(
+                store_id=store_id,
+                status=status,
+                search=search,
+                page=page,
+                limit=limit,
+            )
         )
-        return await self._order_repository.list_orders(filters)
