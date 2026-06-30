@@ -26,6 +26,9 @@ cp .env.example .env
 pip install -e ".[dev]"
 alembic upgrade head
 
+# Optional: load demo data (local dev only)
+python -m rinsehq.infrastructure.seed
+
 # Run API
 uvicorn rinsehq.main:app --reload --port 8000
 ```
@@ -39,9 +42,17 @@ Frontend: `VITE_API_BASE_URL=http://localhost:8000/v1`
 - Auth: `Authorization: Bearer <token>` (token issued after `POST /auth/select-store` or auto on single-store login)
 - Amounts stored in **kobo** (integer); list views format as `N4,300`
 
-## Demo accounts
+## Demo data (manual only)
 
-When `SEED_DEMO_DATA=true`, these accounts are created (password: `Demo1234!`):
+The API does **not** seed the database on startup. Run migrations first, then seed when you want test data:
+
+```bash
+alembic upgrade head
+python -m rinsehq.infrastructure.seed        # skip if demo user exists
+python -m rinsehq.infrastructure.seed --force  # wipe & reseed
+```
+
+Demo accounts (password: `Demo1234!`):
 
 | Email | Role | Stores |
 |-------|------|--------|
@@ -49,6 +60,24 @@ When `SEED_DEMO_DATA=true`, these accounts are created (password: `Demo1234!`):
 | chioma@laundrycare.ng | Manager | STR-002, STR-003 |
 | emeka@laundrycare.ng | Staff | STR-003 |
 | fatima@laundrycare.ng | Viewer | STR-001, STR-002 |
+
+## Render deploy
+
+Pre-Deploy Command is **locked on Render's free tier**. Run migrations in the **Start Command** instead:
+
+| Setting | Command |
+|---------|---------|
+| Build Command | `pip install -r requirements.txt` |
+| Pre-Deploy Command | *(leave empty — not available on free tier)* |
+| Start Command | `sh scripts/start.sh` |
+
+Or as a one-liner:
+
+```bash
+alembic upgrade head && uvicorn rinsehq.main:app --host 0.0.0.0 --port $PORT
+```
+
+Link `DATABASE_URL` from Postgres on the Web Service. To seed demo data (optional): Shell → `python -m rinsehq.infrastructure.seed`
 
 ## Environment variables
 

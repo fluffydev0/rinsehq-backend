@@ -16,10 +16,6 @@ async def lifespan(_app: FastAPI):
     settings = get_settings()
     validate_deployment_config(settings)
     init_db()
-    if settings.seed_demo_data:
-        from rinsehq.infrastructure.seed import seed_demo_data
-
-        await seed_demo_data()
     yield
 
 

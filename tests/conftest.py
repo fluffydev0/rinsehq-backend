@@ -9,7 +9,6 @@ from sqlalchemy.pool import StaticPool
 
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["JWT_SECRET"] = "test-secret"
-os.environ["SEED_DEMO_DATA"] = "false"
 
 from rinsehq.config import get_settings  # noqa: E402
 from rinsehq.infrastructure.db import session as db_session  # noqa: E402

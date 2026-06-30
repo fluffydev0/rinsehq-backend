@@ -11,8 +11,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def _settings_config() -> SettingsConfigDict:
     # On Render, use dashboard env vars only — never a local .env file.
     if os.getenv("RENDER") == "true":
-        return SettingsConfigDict(env_file=None)
-    return SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+        return SettingsConfigDict(env_file=None, extra="ignore")
+    return SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 def normalize_database_url(url: str) -> str:
@@ -34,7 +34,6 @@ class Settings(BaseSettings):
     jwt_secret: str = "dev-secret-change-in-production"
     jwt_expire_minutes: int = 1440
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
-    seed_demo_data: bool = True
     app_base_url: str = "http://localhost:5173"
 
     smtp_host: str = "smtp.gmail.com"
@@ -104,5 +103,5 @@ def validate_deployment_config(settings: Settings | None = None) -> None:
             "Fix: Web Service (not Postgres) → Environment → Add Environment Variable → "
             "Add from Database → pick your Postgres → Save → Redeploy. "
             "Or paste Internal Database URL manually as DATABASE_URL. "
-            "Also set JWT_SECRET and SEED_DEMO_DATA=false."
+            "Also set JWT_SECRET."
         )
