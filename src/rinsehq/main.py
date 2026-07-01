@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from rinsehq.config import get_settings, validate_deployment_config
 from rinsehq.infrastructure.db.session import init_db
+from rinsehq.infrastructure.di import get_nomba_client
 from rinsehq.presentation.api.v1.router import api_v1_router
 
 
@@ -17,6 +18,7 @@ async def lifespan(_app: FastAPI):
     validate_deployment_config(settings)
     init_db()
     yield
+    await get_nomba_client().close()
 
 
 def create_app() -> FastAPI:

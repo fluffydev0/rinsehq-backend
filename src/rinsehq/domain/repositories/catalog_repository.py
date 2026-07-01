@@ -63,6 +63,23 @@ class BillingRepository(Protocol):
 
     async def update_order_payment(self, order_id: str, status: str, method: str) -> None: ...
 
+    async def find_transaction_by_reference(self, reference: str) -> Optional[Transaction]: ...
+
+    async def mark_transaction_successful(
+        self,
+        transaction_id: str,
+        *,
+        channel: str = "card",
+        fee_kobo: int = 0,
+        net_kobo: int = 0,
+    ) -> None: ...
+
+    async def find_invoice_by_order_id(self, order_id: str) -> Optional[Invoice]: ...
+
+    async def find_invoice_by_account_ref(self, account_ref: str) -> Optional[Invoice]: ...
+
+    async def mark_transaction_failed(self, transaction_id: str) -> None: ...
+
 
 class AccountRepository(Protocol):
     async def get_personal(self, user_id: str) -> PersonalInfo: ...

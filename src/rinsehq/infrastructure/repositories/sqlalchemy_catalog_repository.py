@@ -410,17 +410,84 @@ class SqlAlchemyBillingRepository:
             order.payment_method = method
             self._session.flush()
 
+    async def find_transaction_by_reference(self, reference: str) -> Optional[Transaction]:
+        row = self._session.scalar(
+            select(TransactionModel).where(TransactionModel.reference == reference)
+        )
+        return self._txn_entity(row) if row else None
+
+    async def mark_transaction_successful(
+        self,
+        transaction_id: str,
+        *,
+        channel: str = "card",
+        fee_kobo: int = 0,
+        net_kobo: int = 0,
+    ) -> None:
+        txn = self._session.get(TransactionModel, transaction_id)
+        if txn:
+            txn.status = "successful"
+            txn.channel = channel
+            txn.fee_cents = fee_kobo
+            txn.net_amount_cents = net_kobo
+            txn.paid_at = datetime.now(timezone.utc)
+            self._session.flush()
+
+    async def mark_transaction_failed(self, transaction_id: str) -> None:
+        txn = self._session.get(TransactionModel, transaction_id)
+        if txn:
+            txn.status = "failed"
+            self._session.flush()
+
+    async def find_invoice_by_order_id(self, order_id: str) -> Optional[Invoice]:
+        inv = self._session.scalar(
+            select(InvoiceModel)
+            .where(InvoiceModel.order_id == order_id)
+            .options(selectinload(InvoiceModel.line_items), selectinload(InvoiceModel.order))
+        )
+        if not inv:
+            return None
+        store = self._session.get(StoreModel, inv.store_id)
+        profile = self._session.scalar(
+            select(BusinessProfileModel).where(
+                BusinessProfileModel.user_id == store.owner_user_id  # type: ignore[union-attr]
+            )
+        )
+        return self._invoice_entity(inv, inv.order, profile, store)
+
+    async def find_invoice_by_account_ref(self, account_ref: str) -> Optional[Invoice]:
+        suffix = account_ref.removeprefix("rinse_inv_").removeprefix("rinse_")
+        invoice_no = suffix.replace("_", "-").upper()
+        if not invoice_no.startswith("INV-"):
+            invoice_no = f"INV-{invoice_no}"
+        inv = self._session.scalar(
+            select(InvoiceModel)
+            .where(InvoiceModel.invoice_no == invoice_no)
+            .options(selectinload(InvoiceModel.line_items), selectinload(InvoiceModel.order))
+        )
+        if not inv:
+            return None
+        store = self._session.get(StoreModel, inv.store_id)
+        profile = self._session.scalar(
+            select(BusinessProfileModel).where(
+                BusinessProfileModel.user_id == store.owner_user_id  # type: ignore[union-attr]
+            )
+        )
+        return self._invoice_entity(inv, inv.order, profile, store)
+
     def _invoice_entity(
         self, inv: InvoiceModel, order: OrderModel, profile: BusinessProfileModel | None, store: StoreModel
     ) -> Invoice:
         business_name = profile.business_name if profile else store.name
         return Invoice(
             id=inv.id,
+            order_id=inv.order_id,
+            store_id=inv.store_id,
             business_name=business_name,
             status=inv.status,  # type: ignore[arg-type]
             invoice_no=inv.invoice_no,
             invoice_date=inv.invoice_date,
-            payment_method=order.payment_method or "Paystack",
+            payment_method=order.payment_method or "Nomba",
             subtotal=inv.subtotal,
             vat=inv.vat,
             discount=inv.discount,
