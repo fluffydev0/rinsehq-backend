@@ -10,7 +10,7 @@ Laundry business management backend for the [rinsehq-dashboard](https://github.c
 - **JWT** auth with multi-store RBAC
 - **Gmail SMTP** for OTP / invites
 - **Cloudinary** for onboarding file uploads
-- **Paystack** for invoice payments
+- **Nomba** for invoice payments (checkout, webhooks, virtual accounts)
 
 ## Quick start
 
@@ -20,7 +20,7 @@ docker compose up -d
 
 # Configure environment
 cp .env.example .env
-# Edit .env with JWT_SECRET, SMTP, Cloudinary, Paystack keys
+# Edit .env with JWT_SECRET, SMTP, Cloudinary, Nomba keys
 
 # Install & migrate
 pip install -e ".[dev]"
@@ -102,7 +102,7 @@ See [`.env.example`](.env.example) for the full list.
 presentation/  → FastAPI routers, Pydantic schemas
 application/   → Use cases, DTOs
 domain/        → Entities, repository protocols
-infrastructure/→ SQLAlchemy, JWT, email, Cloudinary, Paystack
+infrastructure/→ SQLAlchemy, JWT, email, Cloudinary, Nomba
 ```
 
 ## Tests
