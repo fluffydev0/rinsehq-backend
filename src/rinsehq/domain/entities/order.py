@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 OrderType = Literal["mobile_app", "offline"]
-OrderStatus = Literal["active", "pending", "completed"]
+OrderStatus = Literal["draft", "active", "pending", "completed"]
 PaymentStatus = Literal["paid", "not_paid"]
 
 

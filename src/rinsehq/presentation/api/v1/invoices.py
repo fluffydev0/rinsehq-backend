@@ -65,7 +65,11 @@ async def pay_invoice(
 async def payment_link(
     invoice_id: str,
     ctx: CurrentSession,
+    billing_repo: Annotated[SqlAlchemyBillingRepository, Depends(get_billing_repository)],
 ) -> ApiResponse[dict]:
+    invoice = await billing_repo.find_invoice_for_store(invoice_id, ctx.store_id)
+    if not invoice:
+        raise HTTPException(status_code=404, detail={"success": False, "error": "Invoice not found"})
     settings = get_settings()
     url = f"{settings.app_base_url}/invoice/{invoice_id}"
     return ApiResponse(data={"url": url})

@@ -47,8 +47,7 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str = ""
     cloudinary_folder: str = "rinsehq/onboarding"
 
-    paystack_secret_key: str = ""
-    paystack_public_key: str = ""
+    default_vat_rate_percent: float = 7.5
 
     @field_validator("database_url", mode="before")
     @classmethod

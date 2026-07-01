@@ -141,3 +141,28 @@ def require_permission(capability: str) -> Callable:
         return ctx
 
     return _checker
+
+
+def require_any_permission(*capabilities: str) -> Callable:
+    async def _checker(
+        request: Request,
+        ctx: CurrentSession,
+    ) -> SessionContext:
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and is_read_only(
+            ctx.permission_level
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"success": False, "error": "Read-only access"},
+            )
+        if not any(
+            has_permission(ctx.permission_level, cap, ctx.custom_permissions)
+            for cap in capabilities
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"success": False, "error": "Insufficient permissions"},
+            )
+        return ctx
+
+    return _checker

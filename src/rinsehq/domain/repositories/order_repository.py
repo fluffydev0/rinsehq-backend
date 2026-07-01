@@ -41,6 +41,23 @@ class UpdateOrderInput:
     status: Optional[OrderStatus] = None
     description: Optional[str] = None
     payment_status: Optional[str] = None
+    customer: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_address: Optional[str] = None
+    laundry_mode: Optional[str] = None
+    service_type: Optional[str] = None
+    delivery_mode: Optional[str] = None
+    delivery_date: Optional[object] = None
+    pickup_date: Optional[str] = None
+    pickup_time: Optional[str] = None
+    delivery_time: Optional[str] = None
+    subtotal: Optional[int] = None
+    vat: Optional[int] = None
+    discount: Optional[int] = None
+    total: Optional[int] = None
+    amount_cents: Optional[int] = None
+    line_items: Optional[list[OrderLineItem]] = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +74,7 @@ class OrderSummary:
     active: int
     pending: int
     completed: int
+    draft: int = 0
 
 
 @dataclass(frozen=True)

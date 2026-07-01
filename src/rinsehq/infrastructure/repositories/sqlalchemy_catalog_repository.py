@@ -161,6 +161,15 @@ class SqlAlchemyCatalogRepository(CatalogRepository):
                     description=f"Default {name} service",
                 )
 
+    async def list_customers(self, store_id: str, limit: int = 20) -> list[Customer]:
+        rows = self._session.scalars(
+            select(CustomerModel)
+            .where(CustomerModel.store_id == store_id)
+            .order_by(CustomerModel.name)
+            .limit(limit)
+        ).all()
+        return [self._customer_entity(r) for r in rows]
+
     async def search_customers(self, store_id: str, search: str) -> list[Customer]:
         term = f"%{search}%"
         rows = self._session.scalars(
@@ -300,6 +309,22 @@ class SqlAlchemyBillingRepository:
         if not inv:
             return None
         store = self._session.get(StoreModel, inv.store_id)
+        profile = self._session.scalar(
+            select(BusinessProfileModel).where(
+                BusinessProfileModel.user_id == store.owner_user_id  # type: ignore[union-attr]
+            )
+        )
+        return self._invoice_entity(inv, inv.order, profile, store)
+
+    async def find_invoice_for_store(self, invoice_id: str, store_id: str) -> Optional[Invoice]:
+        inv = self._session.scalar(
+            select(InvoiceModel)
+            .where(InvoiceModel.id == invoice_id, InvoiceModel.store_id == store_id)
+            .options(selectinload(InvoiceModel.line_items), selectinload(InvoiceModel.order))
+        )
+        if not inv:
+            return None
+        store = self._session.get(StoreModel, store_id)
         profile = self._session.scalar(
             select(BusinessProfileModel).where(
                 BusinessProfileModel.user_id == store.owner_user_id  # type: ignore[union-attr]

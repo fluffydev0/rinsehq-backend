@@ -6,7 +6,7 @@ from typing import List, Optional, Union, Literal
 from pydantic import BaseModel, Field
 
 OrderTypeSchema = Literal["mobile_app", "offline"]
-OrderStatusSchema = Literal["active", "pending", "completed"]
+OrderStatusSchema = Literal["draft", "active", "pending", "completed"]
 
 
 class OrderResponse(BaseModel):
@@ -46,6 +46,7 @@ class DashboardSummaryResponse(BaseModel):
     active: int
     pending: int
     completed: int
+    draft: int = 0
 
 
 def format_amount(cents: int) -> str:

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from rinsehq.domain.entities.service import ConfigItem, ServicesConfiguration
 from rinsehq.infrastructure.auth.context import SessionContext
-from rinsehq.infrastructure.di import CurrentSession, get_catalog_repository, require_permission
+from rinsehq.infrastructure.di import CurrentSession, get_catalog_repository, require_any_permission, require_permission
 from rinsehq.infrastructure.repositories.sqlalchemy_catalog_repository import SqlAlchemyCatalogRepository
 from rinsehq.presentation.schemas.envelope import ApiResponse
 from rinsehq.presentation.schemas.mappers import config_to_response, service_to_response
@@ -49,7 +49,7 @@ class AddConfigItemRequest(BaseModel):
 
 @router.get("")
 async def list_services(
-    ctx: Annotated[SessionContext, Depends(require_permission("services"))],
+    ctx: Annotated[SessionContext, Depends(require_any_permission("orders", "services"))],
     catalog_repo: Annotated[SqlAlchemyCatalogRepository, Depends(get_catalog_repository)],
     status: Optional[str] = None,
     category: Optional[str] = None,
