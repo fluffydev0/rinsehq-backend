@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import logging
 import time
 import uuid
 from dataclasses import dataclass
@@ -11,6 +12,8 @@ from typing import Optional
 import httpx
 
 from rinsehq.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -93,12 +96,33 @@ class NombaClient:
 
         return self._cache.access_token
 
-    def _headers(self, token: str) -> dict[str, str]:
-        return {
-            "Authorization": f"Bearer {token}",
-            "accountId": self._settings.nomba_account_id,
-            "Content-Type": "application/json",
-        }
+    def _is_sandbox(self) -> bool:
+        return "sandbox.nomba.com" in self._settings.nomba_base_url
+
+    async def _get_token_optional(self) -> Optional[str]:
+        if not self._settings.nomba_configured:
+            if self._is_sandbox():
+                logger.warning("Nomba credentials missing — using sandbox no-auth checkout mode")
+                return None
+            raise NombaAuthError("Nomba credentials are not configured")
+
+        try:
+            return await self._get_token()
+        except NombaAuthError:
+            if self._is_sandbox():
+                logger.warning(
+                    "Nomba OAuth failed on sandbox — falling back to no-auth checkout mode"
+                )
+                return None
+            raise
+
+    def _headers(self, token: Optional[str]) -> dict[str, str]:
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        if self._settings.nomba_account_id:
+            headers["accountId"] = self._settings.nomba_account_id
+        return headers
 
     async def create_checkout(
         self,
@@ -108,7 +132,7 @@ class NombaClient:
         callback_url: str,
         order_reference: Optional[str] = None,
     ) -> CheckoutResult:
-        token = await self._get_token()
+        token = await self._get_token_optional()
         ref = order_reference or f"rinse_{uuid.uuid4().hex[:20]}"
 
         resp = await self._http.post(
@@ -132,7 +156,10 @@ class NombaClient:
 
         data = resp.json().get("data", {})
         checkout_url = data.get("checkoutUrl") or data.get("checkoutLink", "")
-        return CheckoutResult(checkout_url=checkout_url, order_reference=ref)
+        returned_ref = data.get("orderReference") or ref
+        if not checkout_url:
+            raise NombaCheckoutError(f"Nomba checkout missing checkoutLink: {resp.text}")
+        return CheckoutResult(checkout_url=checkout_url, order_reference=returned_ref)
 
     async def create_virtual_account(
         self,
@@ -141,7 +168,11 @@ class NombaClient:
         account_name: str,
         expected_amount_kobo: Optional[int] = None,
     ) -> VirtualAccountResult:
-        token = await self._get_token()
+        token = await self._get_token_optional()
+        if not token:
+            raise NombaVirtualAccountError(
+                "Virtual accounts require valid Nomba OAuth credentials"
+            )
         payload: dict[str, object] = {
             "accountRef": account_ref,
             "accountName": account_name,
