@@ -25,6 +25,7 @@ from rinsehq.infrastructure.db.models import (
     TransactionModel,
     UserModel,
     VerificationCodeModel,
+    PasswordResetCodeModel,
 )
 from rinsehq.infrastructure.db.session import get_session_factory
 from rinsehq.infrastructure.repositories.sqlalchemy_auth_repository import SqlAlchemyAuthRepository
@@ -311,6 +312,7 @@ def _reset_demo_data(session) -> None:
         BusinessProfileModel,
         StoreModel,
         VerificationCodeModel,
+        PasswordResetCodeModel,
         UserModel,
         IdSequenceModel,
     ):

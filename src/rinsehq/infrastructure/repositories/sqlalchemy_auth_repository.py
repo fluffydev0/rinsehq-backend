@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from rinsehq.domain.entities.user import User, UserCredentials
 from rinsehq.domain.repositories.auth_repository import AuthRepository, CreateUserInput
-from rinsehq.infrastructure.db.models import UserModel, VerificationCodeModel
+from rinsehq.infrastructure.db.models import PasswordResetCodeModel, UserModel, VerificationCodeModel
 from rinsehq.infrastructure.security.passwords import hash_password, verify_password
 
 
@@ -93,6 +93,29 @@ class SqlAlchemyAuthRepository(AuthRepository):
     async def delete_verification_code(self, email: str) -> None:
         self._session.execute(
             delete(VerificationCodeModel).where(VerificationCodeModel.email == email.lower())
+        )
+        self._session.flush()
+
+    async def create_password_reset_code(self, email: str, code: str, expires_at: object) -> None:
+        await self.delete_password_reset_code(email)
+        self._session.add(
+            PasswordResetCodeModel(email=email.lower(), code=code, expires_at=expires_at)  # type: ignore[arg-type]
+        )
+        self._session.flush()
+
+    async def get_password_reset_code(self, email: str) -> Optional[tuple[str, object]]:
+        row = self._session.scalar(
+            select(PasswordResetCodeModel)
+            .where(PasswordResetCodeModel.email == email.lower())
+            .order_by(PasswordResetCodeModel.created_at.desc())
+        )
+        if not row:
+            return None
+        return row.code, row.expires_at
+
+    async def delete_password_reset_code(self, email: str) -> None:
+        self._session.execute(
+            delete(PasswordResetCodeModel).where(PasswordResetCodeModel.email == email.lower())
         )
         self._session.flush()
 

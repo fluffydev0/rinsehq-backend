@@ -28,6 +28,14 @@ class SmtpEmailService:
         )
         await self._send(email, subject, body)
 
+    async def send_password_reset_otp(self, email: str, code: str) -> None:
+        subject = "Reset your RinseHQ password"
+        body = (
+            f"Your RinseHQ password reset code is: {code}\n\n"
+            "This code expires in 15 minutes."
+        )
+        await self._send(email, subject, body)
+
     async def _send(self, to: str, subject: str, body: str) -> None:
         settings = get_settings()
         if not settings.smtp_user or not settings.smtp_password_clean:
@@ -55,3 +63,6 @@ class NoOpEmailService:
 
     async def send_admin_invitation(self, email: str, name: str, invite_link: str) -> None:
         logger.info("NoOp admin invite to %s", email)
+
+    async def send_password_reset_otp(self, email: str, code: str) -> None:
+        logger.info("NoOp password reset OTP to %s: %s", email, code)

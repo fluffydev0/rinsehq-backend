@@ -156,3 +156,47 @@ class ChangePasswordUseCase:
             return ErrorResult("Current password is incorrect.")
         await self._auth.update_password(user_id, hash_password(new_password))
         return SuccessResult(None)
+
+
+class ForgotPasswordUseCase:
+    def __init__(
+        self, auth_repository: AuthRepository, email_service: EmailService
+    ) -> None:
+        self._auth = auth_repository
+        self._email = email_service
+
+    async def execute(self, email: str) -> Result[None]:
+        user = await self._auth.find_by_email(email)
+        if user:
+            code = SqlAlchemyAuthRepository.generate_otp()
+            expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+            await self._auth.create_password_reset_code(email, code, expires)
+            await self._email.send_password_reset_otp(email, code)
+        return SuccessResult(None)
+
+
+class ResetPasswordUseCase:
+    def __init__(self, auth_repository: AuthRepository) -> None:
+        self._auth = auth_repository
+
+    async def execute(self, email: str, code: str, new_password: str) -> Result[None]:
+        from rinsehq.infrastructure.security.passwords import hash_password
+
+        user = await self._auth.find_by_email(email)
+        if not user:
+            return ErrorResult("Account not found")
+        stored = await self._auth.get_password_reset_code(email)
+        if not stored:
+            return ErrorResult("No reset code found. Please request a new one.")
+        stored_code, expires_at = stored
+        now = datetime.now(timezone.utc)
+        exp = expires_at
+        if getattr(exp, "tzinfo", None) is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if now > exp:
+            return ErrorResult("Reset code has expired.")
+        if stored_code != code:
+            return ErrorResult("Invalid reset code")
+        await self._auth.update_password(user.id, hash_password(new_password))
+        await self._auth.delete_password_reset_code(email)
+        return SuccessResult(None)

@@ -9,7 +9,9 @@ from rinsehq.application.dtos.auth import SignInInput, SignUpInput
 from rinsehq.application.dtos.common import ErrorResult
 from rinsehq.application.use_cases.auth_flows import (
     ChangePasswordUseCase,
+    ForgotPasswordUseCase,
     ResendVerificationUseCase,
+    ResetPasswordUseCase,
     SelectStoreUseCase,
     SignInUseCase,
     SignUpUseCase,
@@ -64,6 +66,16 @@ class ResendRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     currentPassword: str
+    newPassword: str = Field(min_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
     newPassword: str = Field(min_length=8)
 
 
@@ -187,6 +199,26 @@ async def change_password(
 ) -> ApiResponse[None]:
     use_case = ChangePasswordUseCase(auth_repo)
     unwrap_result(await use_case.execute(user.id, body.currentPassword, body.newPassword))
+    return ApiResponse(data=None)
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    auth_repo: Annotated[SqlAlchemyAuthRepository, Depends(get_auth_repository)],
+) -> ApiResponse[None]:
+    use_case = ForgotPasswordUseCase(auth_repo, _email_service())
+    await use_case.execute(body.email)
+    return ApiResponse(data=None)
+
+
+@router.post("/reset-password")
+async def reset_password(
+    body: ResetPasswordRequest,
+    auth_repo: Annotated[SqlAlchemyAuthRepository, Depends(get_auth_repository)],
+) -> ApiResponse[None]:
+    use_case = ResetPasswordUseCase(auth_repo)
+    unwrap_result(await use_case.execute(body.email, body.code, body.newPassword))
     return ApiResponse(data=None)
 
 
