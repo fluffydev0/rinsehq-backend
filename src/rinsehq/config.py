@@ -49,6 +49,12 @@ class Settings(BaseSettings):
 
     default_vat_rate_percent: float = 7.5
 
+    nomba_client_id: str = ""
+    nomba_client_secret: str = ""
+    nomba_account_id: str = ""
+    nomba_webhook_secret: str = ""
+    nomba_base_url: str = "https://sandbox.api.nomba.com/v1"
+
     @field_validator("database_url", mode="before")
     @classmethod
     def _normalize_database_url(cls, value: object) -> object:
@@ -81,8 +87,12 @@ class Settings(BaseSettings):
         )
 
     @property
-    def paystack_configured(self) -> bool:
-        return bool(self.paystack_secret_key)
+    def nomba_configured(self) -> bool:
+        return bool(
+            self.nomba_client_id
+            and self.nomba_client_secret
+            and self.nomba_account_id
+        )
 
 
 @lru_cache
