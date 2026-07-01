@@ -35,14 +35,40 @@ class CreateOrderDto:
 class UpdateOrderDto:
     status: Optional[OrderStatus] = None
     description: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_address: Optional[str] = None
+    laundry_mode: Optional[str] = None
+    service_type: Optional[str] = None
+    order_type: Optional[str] = None
+    delivery_date: Optional[datetime] = None
+    pickup_date: Optional[str] = None
+    pickup_time: Optional[str] = None
+    delivery_time: Optional[str] = None
+    subtotal: Optional[int] = None
+    vat: Optional[int] = None
+    discount: Optional[int] = None
+    total: Optional[int] = None
+    line_items: Optional[list[OrderLineItem]] = None
 
 
 VALID_ORDER_TYPES = {"mobile_app", "offline"}
 
 
-def validate_create_order(dto: CreateOrderDto) -> Result[CreateOrderDto]:
-    if not dto.customer_name.strip():
-        return ErrorResult("Customer is required")
-    if dto.total <= 0:
-        return ErrorResult("Amount must be greater than zero")
+def validate_draft_order(dto: CreateOrderDto) -> Result[CreateOrderDto]:
     return SuccessResult(dto)
+
+
+def validate_finalize_order(
+    customer_name: str,
+    line_items: list[OrderLineItem],
+    total: int,
+) -> Result[None]:
+    if not customer_name.strip():
+        return ErrorResult("Customer is required")
+    if not line_items:
+        return ErrorResult("At least one line item is required")
+    if total <= 0:
+        return ErrorResult("Amount must be greater than zero")
+    return SuccessResult(None)

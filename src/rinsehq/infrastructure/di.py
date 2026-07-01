@@ -19,8 +19,21 @@ from rinsehq.infrastructure.repositories.sqlalchemy_catalog_repository import (
 from rinsehq.infrastructure.repositories.sqlalchemy_order_repository import SqlAlchemyOrderRepository
 from rinsehq.infrastructure.repositories.sqlalchemy_store_repository import SqlAlchemyStoreRepository
 from rinsehq.infrastructure.security.jwt import decode_access_token
+from rinsehq.infrastructure.payments.nomba_client import NombaClient
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+_nomba_client: NombaClient | None = None
+
+
+def get_nomba_client() -> NombaClient:
+    global _nomba_client
+    if _nomba_client is None:
+        _nomba_client = NombaClient()
+    return _nomba_client
+
+
+NombaClientDep = Annotated[NombaClient, Depends(get_nomba_client)]
 
 DbSession = Annotated[Session, Depends(get_db_session)]
 
@@ -134,6 +147,31 @@ def require_permission(capability: str) -> Callable:
                 detail={"success": False, "error": "Read-only access"},
             )
         if not has_permission(ctx.permission_level, capability, ctx.custom_permissions):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"success": False, "error": "Insufficient permissions"},
+            )
+        return ctx
+
+    return _checker
+
+
+def require_any_permission(*capabilities: str) -> Callable:
+    async def _checker(
+        request: Request,
+        ctx: CurrentSession,
+    ) -> SessionContext:
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and is_read_only(
+            ctx.permission_level
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"success": False, "error": "Read-only access"},
+            )
+        if not any(
+            has_permission(ctx.permission_level, cap, ctx.custom_permissions)
+            for cap in capabilities
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"success": False, "error": "Insufficient permissions"},

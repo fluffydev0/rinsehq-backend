@@ -33,6 +33,7 @@ async def dashboard_summary(
             "activeOrders": summary.active,
             "completedOrders": summary.completed,
             "pendingOrders": summary.pending,
+            "draftOrders": summary.draft,
         }
     )
 

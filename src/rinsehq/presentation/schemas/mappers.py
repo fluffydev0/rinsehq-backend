@@ -158,6 +158,7 @@ def customer_to_response(customer: Customer) -> dict:
         "name": customer.name,
         "email": customer.email,
         "phone": customer.phone,
+        "address": customer.address,
     }
 
 

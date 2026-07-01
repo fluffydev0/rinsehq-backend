@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from rinsehq.infrastructure.di import CurrentSession, get_catalog_repository, require_permission
+from rinsehq.infrastructure.di import get_catalog_repository, require_permission
 from rinsehq.infrastructure.auth.context import SessionContext
 from rinsehq.infrastructure.repositories.sqlalchemy_catalog_repository import SqlAlchemyCatalogRepository
 from rinsehq.presentation.schemas.envelope import ApiResponse
@@ -18,8 +18,10 @@ async def search_customers(
     ctx: Annotated[SessionContext, Depends(require_permission("orders"))],
     catalog_repo: Annotated[SqlAlchemyCatalogRepository, Depends(get_catalog_repository)],
     search: str = Query("", min_length=0),
+    limit: int = Query(20, ge=1, le=100),
 ) -> ApiResponse[list]:
-    if not search:
-        return ApiResponse(data=[])
-    customers = await catalog_repo.search_customers(ctx.store_id, search)
+    if search:
+        customers = await catalog_repo.search_customers(ctx.store_id, search)
+    else:
+        customers = await catalog_repo.list_customers(ctx.store_id, limit)
     return ApiResponse(data=[customer_to_response(c) for c in customers])

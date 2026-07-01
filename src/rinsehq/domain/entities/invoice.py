@@ -16,6 +16,8 @@ class InvoiceLineItem:
 @dataclass(frozen=True)
 class Invoice:
     id: str
+    order_id: str
+    store_id: str
     business_name: str
     status: str
     invoice_no: str

@@ -279,7 +279,7 @@ class TransactionModel(Base):
     customer: Mapped[str] = mapped_column(String(255), nullable=False)
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     type: Mapped[str] = mapped_column(String(16), nullable=False, default="payment")
-    payment_method: Mapped[str] = mapped_column(String(64), nullable=False, default="Paystack")
+    payment_method: Mapped[str] = mapped_column(String(64), nullable=False, default="Nomba")
     status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     fee_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     net_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

@@ -119,6 +119,53 @@ class SqlAlchemyOrderRepository(OrderRepository):
             row.description = input.description
         if input.payment_status is not None:
             row.payment_status = input.payment_status
+        if input.customer is not None:
+            row.customer = input.customer
+        if input.customer_email is not None:
+            row.customer_email = input.customer_email
+        if input.customer_phone is not None:
+            row.customer_phone = input.customer_phone
+        if input.customer_address is not None:
+            row.customer_address = input.customer_address
+        if input.laundry_mode is not None:
+            row.laundry_mode = input.laundry_mode
+        if input.service_type is not None:
+            row.service_type = input.service_type
+        if input.delivery_mode is not None:
+            row.delivery_mode = input.delivery_mode
+        if input.delivery_date is not None:
+            row.delivery_date = input.delivery_date  # type: ignore[assignment]
+        if input.pickup_date is not None:
+            row.pickup_date = input.pickup_date
+        if input.pickup_time is not None:
+            row.pickup_time = input.pickup_time
+        if input.delivery_time is not None:
+            row.delivery_time = input.delivery_time
+        if input.subtotal is not None:
+            row.subtotal = input.subtotal
+        if input.vat is not None:
+            row.vat = input.vat
+        if input.discount is not None:
+            row.discount = input.discount
+        if input.total is not None:
+            row.total = input.total
+        if input.amount_cents is not None:
+            row.amount_cents = input.amount_cents
+        if input.line_items is not None:
+            for existing in list(row.line_items):
+                self._session.delete(existing)
+            self._session.flush()
+            for item in input.line_items:
+                self._session.add(
+                    OrderLineItemModel(
+                        order_id=row.id,
+                        name=item.name,
+                        quantity=item.quantity,
+                        unit_price=item.unit_price,
+                        amount=item.amount,
+                        laundry_mode=item.laundry_mode,
+                    )
+                )
         self._session.flush()
         return self._to_entity(row)
 
@@ -133,6 +180,7 @@ class SqlAlchemyOrderRepository(OrderRepository):
             active=counts.get("active", 0),
             pending=counts.get("pending", 0),
             completed=counts.get("completed", 0),
+            draft=counts.get("draft", 0),
         )
 
     async def recent_orders(self, store_id: str, limit: int) -> list[Order]:

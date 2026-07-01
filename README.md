@@ -10,7 +10,7 @@ Laundry business management backend for the [rinsehq-dashboard](https://github.c
 - **JWT** auth with multi-store RBAC
 - **Gmail SMTP** for OTP / invites
 - **Cloudinary** for onboarding file uploads
-- **Paystack** for invoice payments
+- **Nomba** for invoice payments (checkout, webhooks, virtual accounts)
 
 ## Quick start
 
@@ -20,7 +20,7 @@ docker compose up -d
 
 # Configure environment
 cp .env.example .env
-# Edit .env with JWT_SECRET, SMTP, Cloudinary, Paystack keys
+# Edit .env with JWT_SECRET, SMTP, Cloudinary, Nomba keys
 
 # Install & migrate
 pip install -e ".[dev]"
@@ -102,7 +102,7 @@ See [`.env.example`](.env.example) for the full list.
 presentation/  → FastAPI routers, Pydantic schemas
 application/   → Use cases, DTOs
 domain/        → Entities, repository protocols
-infrastructure/→ SQLAlchemy, JWT, email, Cloudinary, Paystack
+infrastructure/→ SQLAlchemy, JWT, email, Cloudinary, Nomba
 ```
 
 ## Tests
@@ -117,9 +117,21 @@ PYTHONPATH=src pytest tests/ -q
 |------|----------|
 | Auth | `POST /v1/auth/signup`, `/login`, `/select-store`, `/verify-email` |
 | Stores | `GET /v1/stores`, `POST /v1/stores` |
-| Orders | `GET/POST /v1/orders` |
+| Orders | `GET/POST /v1/orders`, `GET/PATCH /v1/orders/:id`, `POST /v1/orders/:id/finalize` |
+| Customers | `GET /v1/customers?search=` (browse with no `search` returns recent customers) |
 | Dashboard | `GET /v1/dashboard/summary` |
-| Services | `GET/POST /v1/services` |
-| Invoices | `GET /v1/invoices/:id`, `POST /v1/invoices/:id/pay` |
+| Services | `GET/POST /v1/services` (`GET` allowed with `orders` or `services` permission) |
+| Invoices | `GET /v1/invoices/:id`, `POST /v1/invoices/:id/pay`, `GET /v1/invoices/:id/payment-link` |
 | Account | `GET/PATCH /v1/account/personal` |
 | Admins | `GET/POST /v1/admins` |
+
+### Order create flow
+
+1. `POST /v1/orders` — saves a **draft** order (no invoice). Response: `{ order, invoice: null }`.
+2. `PATCH /v1/orders/:id` — edit draft fields (customer, line items, pricing, pickup/delivery).
+3. `POST /v1/orders/:id/finalize` — validates, computes VAT server-side (`DEFAULT_VAT_RATE_PERCENT`, default 7.5%), creates invoice. Response: `{ order, invoice, paymentLink }`.
+4. `GET /v1/invoices/:id/payment-link` — shareable payment URL (auth required, scoped to store).
+
+List orders supports `?status=draft|active|pending|completed`, `page`, `limit`, and returns `meta: { total, page, limit }`.
+
+Interactive API docs: `http://localhost:8000/docs` when the server is running.
