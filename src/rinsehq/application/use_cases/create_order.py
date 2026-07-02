@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from rinsehq.application.dtos.order import CreateOrderDto, validate_draft_order
 from rinsehq.application.dtos.common import ErrorResult, Result, SuccessResult
+from rinsehq.application.services.order_line_items import resolve_order_line_items
+from rinsehq.application.services.order_pricing import compute_order_pricing
+from rinsehq.config import get_settings
 from rinsehq.domain.entities.order import Order
 from rinsehq.domain.repositories.catalog_repository import CatalogRepository
 from rinsehq.domain.repositories.order_repository import CreateOrderInput, OrderRepository
@@ -30,6 +33,19 @@ class CreateOrderUseCase:
         if isinstance(validated, ErrorResult):
             return validated
         data = validated.data
+
+        resolved = await resolve_order_line_items(self._catalog, store_id, data.line_items)
+        if isinstance(resolved, ErrorResult):
+            return resolved
+        line_items = resolved.data
+
+        settings = get_settings()
+        subtotal, vat, discount, total = compute_order_pricing(
+            line_items,
+            discount=data.discount,
+            vat_rate_percent=settings.default_vat_rate_percent,
+        )
+
         if data.customer_name.strip():
             await self._catalog.upsert_customer(
                 store_id,
@@ -44,7 +60,7 @@ class CreateOrderUseCase:
                 store_id=store_id,
                 type=data.type,
                 customer=data.customer_name,
-                amount_cents=data.total,
+                amount_cents=total,
                 status="draft",
                 order_date=data.order_date,
                 delivery_date=data.delivery_date,
@@ -59,11 +75,11 @@ class CreateOrderUseCase:
                 pickup_time=data.pickup_time,
                 delivery_time=data.delivery_time,
                 description=data.description,
-                subtotal=data.subtotal,
-                vat=data.vat,
-                discount=data.discount,
-                total=data.total,
-                line_items=data.line_items,
+                subtotal=subtotal,
+                vat=vat,
+                discount=discount,
+                total=total,
+                line_items=line_items,
             )
         )
         refreshed = await self._orders.find_by_id(order.id, store_id)
