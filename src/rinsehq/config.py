@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     nomba_client_secret: str = ""
     nomba_account_id: str = ""
     nomba_webhook_secret: str = ""
-    nomba_base_url: str = "https://sandbox.api.nomba.com/v1"
+    nomba_base_url: str = "https://sandbox.nomba.com/v1"
 
     @field_validator("database_url", mode="before")
     @classmethod
