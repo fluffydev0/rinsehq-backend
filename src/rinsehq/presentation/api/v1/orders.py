@@ -33,10 +33,11 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 class LineItemRequest(BaseModel):
-    name: str
-    quantity: int
-    unitPrice: int
-    amount: int
+    serviceId: Optional[str] = None
+    name: str = ""
+    quantity: int = 1
+    unitPrice: int = 0
+    amount: int = 0
     laundryMode: Optional[str] = None
 
 
@@ -102,6 +103,7 @@ def _line_items_from_request(items: list[LineItemRequest]) -> list[OrderLineItem
             unit_price=li.unitPrice,
             amount=li.amount,
             laundry_mode=li.laundryMode,
+            service_id=li.serviceId,
         )
         for li in items
     ]
@@ -145,6 +147,13 @@ def get_finalize_order_use_case(
     billing_repo: Annotated[SqlAlchemyBillingRepository, Depends(get_billing_repository)],
 ) -> FinalizeOrderUseCase:
     return FinalizeOrderUseCase(order_repo, catalog_repo, billing_repo)
+
+
+def get_update_order_use_case(
+    order_repo: Annotated[SqlAlchemyOrderRepository, Depends(get_order_repository)],
+    catalog_repo: Annotated[SqlAlchemyCatalogRepository, Depends(get_catalog_repository)],
+) -> UpdateOrderUseCase:
+    return UpdateOrderUseCase(order_repo, catalog_repo)
 
 
 def _payment_link_url(invoice_id: str) -> str:
@@ -202,7 +211,7 @@ async def update_order(
     order_id: str,
     body: UpdateOrderRequest,
     ctx: Annotated[SessionContext, Depends(require_permission("orders"))],
-    order_repo: Annotated[SqlAlchemyOrderRepository, Depends(get_order_repository)],
+    use_case: Annotated[UpdateOrderUseCase, Depends(get_update_order_use_case)],
 ) -> ApiResponse[dict]:
     now = datetime.utcnow()
     line_items = (
@@ -228,7 +237,6 @@ async def update_order(
         total=body.total,
         line_items=line_items,
     )
-    use_case = UpdateOrderUseCase(order_repo)
     order = unwrap_result(
         await use_case.execute(order_id, ctx.store_id, dto),
         not_found=True,

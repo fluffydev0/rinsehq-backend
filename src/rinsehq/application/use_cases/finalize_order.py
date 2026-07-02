@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rinsehq.application.dtos.common import ErrorResult, Result, SuccessResult
 from rinsehq.application.dtos.order import validate_finalize_order
+from rinsehq.application.services.order_line_items import collect_service_ids
 from rinsehq.application.services.order_pricing import compute_order_pricing
 from rinsehq.config import get_settings
 from rinsehq.domain.entities.invoice import Invoice
@@ -68,5 +69,9 @@ class FinalizeOrderUseCase:
             return ErrorResult("Order not found")
 
         invoice = await self._billing.create_invoice_for_order(order_id, store_id)
+        await self._catalog.increment_service_orders_count(
+            store_id,
+            collect_service_ids(line_items),
+        )
         refreshed = await self._orders.find_by_id(order_id, store_id)
         return SuccessResult((refreshed or updated, invoice))

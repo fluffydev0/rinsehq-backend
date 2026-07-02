@@ -218,6 +218,7 @@ class OrderLineItemModel(Base):
     unit_price: Mapped[int] = mapped_column(Integer, nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     laundry_mode: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    service_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
 
     order: Mapped[OrderModel] = relationship(back_populates="line_items")
 
