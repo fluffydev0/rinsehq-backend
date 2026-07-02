@@ -161,6 +161,22 @@ class SqlAlchemyCatalogRepository(CatalogRepository):
                     description=f"Default {name} service",
                 )
 
+    async def increment_service_orders_count(
+        self, store_id: str, service_ids: list[str]
+    ) -> None:
+        unique_ids = {sid for sid in service_ids if sid}
+        if not unique_ids:
+            return
+        rows = self._session.scalars(
+            select(ServiceModel).where(
+                ServiceModel.store_id == store_id,
+                ServiceModel.id.in_(unique_ids),
+            )
+        ).all()
+        for row in rows:
+            row.orders_count += 1
+        self._session.flush()
+
     async def list_customers(self, store_id: str, limit: int = 20) -> list[Customer]:
         rows = self._session.scalars(
             select(CustomerModel)

@@ -16,6 +16,7 @@ class OrderLineItem:
     unit_price: int
     amount: int
     laundry_mode: str | None = None
+    service_id: str | None = None
 
 
 @dataclass(frozen=True)
