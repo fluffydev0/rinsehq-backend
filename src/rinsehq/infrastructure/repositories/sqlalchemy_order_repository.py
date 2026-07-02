@@ -97,6 +97,7 @@ class SqlAlchemyOrderRepository(OrderRepository):
                         unit_price=item.unit_price,
                         amount=item.amount,
                         laundry_mode=item.laundry_mode,
+                        service_id=item.service_id,
                     )
                 )
             self._session.flush()
@@ -164,8 +165,11 @@ class SqlAlchemyOrderRepository(OrderRepository):
                         unit_price=item.unit_price,
                         amount=item.amount,
                         laundry_mode=item.laundry_mode,
+                        service_id=item.service_id,
                     )
                 )
+            self._session.flush()
+            self._session.refresh(row)
         self._session.flush()
         return self._to_entity(row)
 
@@ -220,6 +224,7 @@ class SqlAlchemyOrderRepository(OrderRepository):
                     unit_price=li.unit_price,
                     amount=li.amount,
                     laundry_mode=li.laundry_mode,
+                    service_id=li.service_id,
                 )
                 for li in row.line_items
             ]

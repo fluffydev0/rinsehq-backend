@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from rinsehq.application.dtos.common import ErrorResult, Result, SuccessResult
 from rinsehq.application.dtos.order import UpdateOrderDto
+from rinsehq.application.services.order_line_items import resolve_order_line_items
+from rinsehq.application.services.order_pricing import compute_order_pricing
+from rinsehq.config import get_settings
 from rinsehq.domain.entities.order import Order
+from rinsehq.domain.repositories.catalog_repository import CatalogRepository
 from rinsehq.domain.repositories.order_repository import OrderRepository, UpdateOrderInput
 
 
@@ -27,8 +31,13 @@ class GetOrderUseCase:
 
 
 class UpdateOrderUseCase:
-    def __init__(self, order_repository: OrderRepository) -> None:
+    def __init__(
+        self,
+        order_repository: OrderRepository,
+        catalog_repository: CatalogRepository,
+    ) -> None:
         self._order_repository = order_repository
+        self._catalog = catalog_repository
 
     async def execute(
         self, order_id: str, store_id: str, dto: UpdateOrderDto
@@ -64,11 +73,29 @@ class UpdateOrderUseCase:
         if has_draft_fields and order.status != "draft":
             return ErrorResult("Only draft orders can be edited")
 
+        line_items = dto.line_items
+        subtotal = dto.subtotal
+        vat = dto.vat
+        discount = dto.discount
+        total = dto.total
+        amount_cents = dto.total
+
+        if line_items is not None:
+            resolved = await resolve_order_line_items(self._catalog, store_id, line_items)
+            if isinstance(resolved, ErrorResult):
+                return resolved
+            line_items = resolved.data
+            settings = get_settings()
+            subtotal, vat, discount, total = compute_order_pricing(
+                line_items,
+                discount=dto.discount if dto.discount is not None else order.discount,
+                vat_rate_percent=settings.default_vat_rate_percent,
+            )
+            amount_cents = total
+
         delivery_mode = None
         if dto.order_type is not None:
             delivery_mode = ORDER_TYPE_MAP.get(dto.order_type, dto.order_type)
-
-        amount_cents = dto.total if dto.total is not None else None
 
         order = await self._order_repository.update(
             order_id,
@@ -86,12 +113,12 @@ class UpdateOrderUseCase:
                 pickup_date=dto.pickup_date,
                 pickup_time=dto.pickup_time,
                 delivery_time=dto.delivery_time,
-                subtotal=dto.subtotal,
-                vat=dto.vat,
-                discount=dto.discount,
-                total=dto.total,
+                subtotal=subtotal,
+                vat=vat,
+                discount=discount,
+                total=total,
                 amount_cents=amount_cents,
-                line_items=dto.line_items,
+                line_items=line_items,
             ),
             store_id,
         )

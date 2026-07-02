@@ -104,6 +104,7 @@ def order_detail_to_response(order: Order) -> dict:
             "serviceType": order.service_type,
             "lineItems": [
                 {
+                    "serviceId": li.service_id or "",
                     "name": li.name,
                     "quantity": li.quantity,
                     "unitPrice": li.unit_price,

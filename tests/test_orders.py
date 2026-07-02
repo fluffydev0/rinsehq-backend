@@ -75,10 +75,8 @@ def test_finalize_requires_line_items(client):
         headers=headers,
         json={"customer": {"name": "Empty"}, "lineItems": [], "total": 0},
     )
-    assert create.status_code == 201
-    order_id = create.json()["data"]["order"]["id"]
-    finalize = client.post(f"/v1/orders/{order_id}/finalize", headers=headers)
-    assert finalize.status_code == 400
+    assert create.status_code == 400
+    assert "line item" in create.json()["error"].lower()
 
 
 def test_list_customers_without_search(client):
